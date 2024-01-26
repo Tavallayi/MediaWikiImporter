@@ -1,4 +1,6 @@
 
+using Microsoft.AspNetCore.HttpOverrides;
+
 namespace MediaWikiImporter
 {
     public class Program
@@ -6,6 +8,12 @@ namespace MediaWikiImporter
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            //builder.WebHost.ConfigureKestrel(options =>
+            //{
+            //    options.ListenAnyIP(5000);
+            //});
+            builder.Logging.ClearProviders();
+            builder.Logging.AddConsole();
 
             // Add services to the container.
 
@@ -20,7 +28,12 @@ namespace MediaWikiImporter
                 app.UseHsts();
             }
 
-            app.UseHttpsRedirection();
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            });
+
+            //app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseRouting();
 

@@ -51,6 +51,7 @@ public class BotTest : IClassFixture<BotFixture>
 
         bot.Subject.LoginToken.Should().NotBeNullOrEmpty();
         bot.Subject.CsrfToken.Should().NotBeNullOrEmpty();
+        bot.Subject.CsrfToken.Should().NotBe("+\\");
     }
 
     [Fact]

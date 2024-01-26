@@ -7,19 +7,31 @@ namespace Project1.Controllers;
 [Route("api/[controller]")]
 public class WikiController : ControllerBase
 {
-    public WikiController(IConfiguration configuration)
+    public WikiController(IConfiguration configuration, ILogger<WikiController> logger)
     {
         Configuration = configuration;
+        Logger = logger;
     }
 
     private IConfiguration Configuration { get; }
+    public ILogger Logger { get; }
+
+    [HttpGet]
+    [Route("Search")]
+    public async Task<IEnumerable<string?>?> SearchAsync(string s)
+    {
+        Bot bot = new Bot(Configuration, "wikipedia", Logger);
+        var query = await bot.Search(s);
+        return query?.Search?.Select(s => s.Title).ToList();
+    }
 
     [HttpGet]
     [Route("WantedFiles")]
     public async Task<IEnumerable<string?>?> WantedFilesAsync()
     {
-        Bot bot = new Bot(Configuration, "wiki");
-        var files = await bot.WantedFiles(15);
+        Logger.LogInformation("WantedFiles");
+        Bot bot = new Bot(Configuration, "wiki", Logger);
+        var files = await bot.WantedFiles(150);
         return files?.QueryPage?.Results?.Select(qp => qp.Title).ToList();
     }
 
@@ -27,8 +39,9 @@ public class WikiController : ControllerBase
     [Route("WantedPages")]
     public async Task<IEnumerable<string?>?> WantedPagesAsync()
     {
-        Bot bot = new Bot(Configuration, "wiki");
-        var pages = await bot.WantedPages(50);
+        Logger.LogInformation("WantedPages");
+        Bot bot = new Bot(Configuration, "wiki", Logger);
+        var pages = await bot.WantedPages(450);
         return pages?.QueryPage?.Results?.Select(qp => qp.Title).ToList();
     }
 
@@ -41,12 +54,15 @@ public class WikiController : ControllerBase
             using var streamReader = new StreamReader(Request.Body);
             var page = streamReader.ReadToEndAsync().Result;
 
-            Bot wikipediabot = new Bot(Configuration, "wikipedia");
+            Logger.LogInformation($"start downloading: {page}");
+
+            Bot wikipediabot = new Bot(Configuration, "wikipedia", Logger);
             var wikipediapages = await wikipediabot.GetPage(page);
 
-            Bot bot = new Bot(Configuration, "wiki");
+            Bot bot = new Bot(Configuration, "wiki", Logger);
             foreach (var item in wikipediapages!)
             {
+                Logger.Log(LogLevel.Information, $"Title:{item.Title}, {string.IsNullOrEmpty(item.Revisions?.FirstOrDefault()?.Content)}");
                 if (!string.IsNullOrEmpty(item.Title) && !string.IsNullOrEmpty(item.Revisions?.FirstOrDefault()?.Content))
                     await bot.Save(item.Title, item.Revisions!.FirstOrDefault()!.Content!);
                 else
@@ -68,11 +84,11 @@ public class WikiController : ControllerBase
         {
             using var streamReader = new StreamReader(Request.Body);
             var page = streamReader.ReadToEndAsync().Result;
-
-            Bot wikipediabot = new Bot(Configuration, "wikipedia");
+            Logger.LogInformation($"Wanted files {page}");
+            Bot wikipediabot = new Bot(Configuration, "wikipedia", Logger);
             var wikipediaimages = await wikipediabot.GetFileInfo(true, page);
 
-            Bot bot = new Bot(Configuration, "wiki");
+            Bot bot = new Bot(Configuration, "wiki", Logger);
             foreach (var item in wikipediaimages!)
             {
                 if (!string.IsNullOrEmpty(item.Title) && (item.ImageInfo?.Length ?? 0) > 0)
@@ -82,8 +98,9 @@ public class WikiController : ControllerBase
             }
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            Logger.LogError(ex.ToString());
             return false;
         }
     }

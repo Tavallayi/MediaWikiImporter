@@ -8,4 +8,8 @@ public class Query
 
     [JsonPropertyName("querypage")]
     public QueryPage? QueryPage { get; set; }
+
+    [JsonPropertyName("search")]
+    public Search[]? Search { get; set; }
+
 }
